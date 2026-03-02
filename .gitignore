@@ -1,0 +1,12 @@
+# Secrets — never commit
+.env
+*.credentials*
+**/credentials.json
+
+# Claude Code session data
+claude-code/history.jsonl
+claude-code/.credentials.json
+
+# OS junk
+.DS_Store
+Thumbs.db
