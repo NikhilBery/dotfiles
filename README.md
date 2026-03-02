@@ -49,7 +49,7 @@ cd ~/Projects/dotfiles
 ./install.sh --claude     # Claude Code + statusline
 ./install.sh --git        # Git config + gh
 ./install.sh --fonts      # JetBrains Mono + MesloLGS NF + Noto Sans
-./install.sh --scripts    # Upwork Wayland patch + screenshot bridge
+./install.sh --upwork     # Upwork Wayland patch + screenshot bridge (not in --all)
 ```
 
 ## Post-install

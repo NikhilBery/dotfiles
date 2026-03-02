@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Upwork
+Comment=Upwork Desktop Application
+GenericName=Time Tracker
+Exec=upwork-wayland %U
+Icon=upwork
+Type=Application
+StartupNotify=true
+StartupWMClass=Upwork
+Categories=Utility;
+MimeType=x-scheme-handler/upwork;
+Keywords=upwork;freelance;time;tracker;

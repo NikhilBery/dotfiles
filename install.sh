@@ -5,7 +5,7 @@
 # Usage:
 #   git clone <this-repo> ~/Projects/dotfiles
 #   cd ~/Projects/dotfiles
-#   ./install.sh [--all | --packages | --shell | --kitty | --kde | --claude | --git | --fonts | --scripts]
+#   ./install.sh [--all | --packages | --shell | --kitty | --kde | --claude | --git | --fonts | --upwork]
 #
 # With no arguments, runs --all
 
@@ -420,38 +420,51 @@ install_claude() {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Custom Scripts (Upwork Wayland, screenshot bridge)
+# Upwork Wayland + Screenshot Bridge (requires --scripts flag)
 # ─────────────────────────────────────────────────────────────────────────────
 install_scripts() {
-    info "Installing custom scripts..."
+    info "Installing Upwork Wayland support + screenshot bridge..."
 
     mkdir -p "$HOME/.local/bin"
 
-    # ImageMagick (needed by Upwork patch for screenshot compression)
+    # Dependencies
     sudo dnf install -y ImageMagick 2>/dev/null || true
 
-    # Upwork Wayland support
+    # Upwork Wayland scripts
     copy_file "$DOTFILES_DIR/scripts/upwork/patch-upwork" "$HOME/.local/bin/patch-upwork"
     chmod +x "$HOME/.local/bin/patch-upwork"
     copy_file "$DOTFILES_DIR/scripts/upwork/upwork-wayland" "$HOME/.local/bin/upwork-wayland"
     chmod +x "$HOME/.local/bin/upwork-wayland"
 
-    # Screenshot bridge systemd service
-    mkdir -p "$HOME/.config/systemd/user"
-    copy_file "$DOTFILES_DIR/systemd/plasma-gnome-screenshot-bridge.service" "$HOME/.config/systemd/user/plasma-gnome-screenshot-bridge.service"
+    # Upwork desktop entry (routes through wayland wrapper)
+    mkdir -p "$HOME/.local/share/applications"
+    copy_file "$DOTFILES_DIR/scripts/upwork/upwork.desktop" "$HOME/.local/share/applications/upwork.desktop"
+    update-desktop-database "$HOME/.local/share/applications/" 2>/dev/null || true
 
-    # Install the bridge binary if the project is available
-    if [[ -d "$HOME/Projects/plasma-gnome-screenshot-bridge" ]]; then
-        info "Building plasma-gnome-screenshot-bridge from source..."
-        (cd "$HOME/Projects/plasma-gnome-screenshot-bridge" && go build -o "$HOME/.local/bin/plasma-gnome-screenshot-bridge" .)
-        systemctl --user daemon-reload
-        systemctl --user enable plasma-gnome-screenshot-bridge.service
-        ok "Screenshot bridge service enabled"
-    else
-        warn "plasma-gnome-screenshot-bridge project not found — clone it to ~/Projects/ and build manually"
+    # Screenshot bridge — clone and install from its own repo
+    if ! command -v plasma-gnome-screenshot-bridge &>/dev/null; then
+        if [[ ! -d "$HOME/Projects/plasma-gnome-screenshot-bridge" ]]; then
+            info "Cloning plasma-gnome-screenshot-bridge..."
+            git clone https://github.com/NikhilBery/plasma-gnome-screenshot-bridge.git \
+                "$HOME/Projects/plasma-gnome-screenshot-bridge"
+        fi
+        info "Installing plasma-gnome-screenshot-bridge..."
+        (cd "$HOME/Projects/plasma-gnome-screenshot-bridge" && uv pip install . 2>/dev/null || pip install --user .)
     fi
 
-    ok "Custom scripts installed"
+    # Systemd service
+    mkdir -p "$HOME/.config/systemd/user"
+    copy_file "$DOTFILES_DIR/systemd/plasma-gnome-screenshot-bridge.service" "$HOME/.config/systemd/user/plasma-gnome-screenshot-bridge.service"
+    systemctl --user daemon-reload
+    systemctl --user enable plasma-gnome-screenshot-bridge.service 2>/dev/null || true
+
+    if [[ -f /opt/Upwork/upwork ]]; then
+        warn "Run 'patch-upwork install' to patch Upwork for Wayland screenshots"
+    else
+        info "Upwork not installed — scripts are ready for when you install it"
+    fi
+
+    ok "Upwork Wayland + screenshot bridge installed"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -465,7 +478,6 @@ run_all() {
     install_kitty
     install_git
     install_claude
-    install_scripts
 
     echo ""
     ok "All done! Next steps:"
@@ -473,6 +485,9 @@ run_all() {
     echo "  2. Run 'gh auth login' to authenticate GitHub"
     echo "  3. Run 'claude' to authenticate Claude Code"
     echo "  4. Run 'p10k configure' if the prompt looks wrong"
+    echo ""
+    echo "  Optional:"
+    echo "    ./install.sh --upwork   # Upwork Wayland patch + screenshot bridge"
     echo ""
     echo "  Apps to install manually (not in Fedora repos):"
     echo "    - Brave Browser: https://brave.com/linux/"
@@ -503,9 +518,9 @@ for arg in "$@"; do
         --claude)    install_claude ;;
         --git)       install_git ;;
         --fonts)     install_fonts ;;
-        --scripts)   install_scripts ;;
+        --upwork)    install_scripts ;;
         --help|-h)
-            echo "Usage: $0 [--all | --packages | --shell | --kitty | --kde | --claude | --git | --fonts | --scripts]"
+            echo "Usage: $0 [--all | --packages | --shell | --kitty | --kde | --claude | --git | --fonts | --upwork]"
             echo "  No arguments = --all"
             ;;
         *)
