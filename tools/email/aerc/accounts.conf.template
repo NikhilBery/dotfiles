@@ -1,0 +1,21 @@
+# aerc accounts — Gmail via notmuch + lieer
+#
+# Setup steps:
+#   1. Create Google Cloud project → enable Gmail API → create OAuth2 Desktop credentials
+#   2. Download client_secret.json to ~/.mail/gmail/
+#   3. cd ~/.mail/gmail && gmi init YOUR_EMAIL@gmail.com
+#   4. gmi pull                    (first sync — may take hours)
+#   5. notmuch new                 (index the mail)
+#   6. Edit THIS FILE: replace YOUR_NAME and YOUR_EMAIL below
+#   7. chmod 600 ~/.config/aerc/accounts.conf
+#   8. Run 'aerc'
+#
+# Periodic sync:  cd ~/.mail/gmail && gmi sync && notmuch new
+
+[gmail]
+source = notmuch://~/.mail/gmail
+query-map = ~/.config/aerc/query-map
+default = Inbox
+from = YOUR_NAME <YOUR_EMAIL@gmail.com>
+outgoing = gmi send -t -C ~/.mail/gmail
+copy-to =

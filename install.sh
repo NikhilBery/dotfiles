@@ -5,7 +5,20 @@
 # Usage:
 #   git clone <this-repo> ~/Projects/dotfiles
 #   cd ~/Projects/dotfiles
-#   ./install.sh [--all | --packages | --shell | --kitty | --kde | --claude | --git | --fonts | --upwork]
+#   ./install.sh [--all | --packages | --shell | --kitty | --kde | --claude | --git | --fonts]
+#
+# Optional tools (not in --all):
+#   ./install.sh --tools         # All optional tools at once
+#   ./install.sh --eza           # Modern ls replacement
+#   ./install.sh --bat           # Modern cat replacement
+#   ./install.sh --zoxide        # Smarter cd
+#   ./install.sh --lazygit       # Terminal git UI
+#   ./install.sh --direnv        # Per-directory env vars
+#   ./install.sh --tmux          # tmux config (Catppuccin, vi keys)
+#   ./install.sh --taskwarrior   # Task management CLI
+#   ./install.sh --butler        # ASUS Zenbook S 14 power/backlight daemon
+#   ./install.sh --email         # Terminal email (aerc + notmuch + lieer for Gmail)
+#   ./install.sh --upwork        # Upwork Wayland patch + screenshot bridge
 #
 # With no arguments, runs --all
 
@@ -419,8 +432,209 @@ install_claude() {
     ok "Claude Code configured"
 }
 
+# ═════════════════════════════════════════════════════════════════════════════
+# Optional tools — NOT included in --all. Install individually or use --tools.
+# ═════════════════════════════════════════════════════════════════════════════
+
 # ─────────────────────────────────────────────────────────────────────────────
-# Upwork Wayland + Screenshot Bridge (requires --scripts flag)
+# eza (modern ls replacement)
+# ─────────────────────────────────────────────────────────────────────────────
+install_eza() {
+    info "Installing eza..."
+    if command -v eza &>/dev/null; then
+        ok "eza already installed"
+        return
+    fi
+    # Try dnf first (available Fedora 41+), fall back to cargo
+    if sudo dnf install -y eza 2>/dev/null; then
+        ok "eza installed via dnf"
+    elif command -v cargo &>/dev/null; then
+        info "dnf failed, installing via cargo..."
+        cargo install eza
+        ok "eza installed via cargo"
+    else
+        err "Install Rust first (--packages), then retry --eza"
+        return 1
+    fi
+    ok "Aliases (ls, ll, la, lt) activate automatically in zshrc"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# bat (modern cat replacement)
+# ─────────────────────────────────────────────────────────────────────────────
+install_bat() {
+    info "Installing bat..."
+    if command -v bat &>/dev/null; then
+        ok "bat already installed"
+        return
+    fi
+    sudo dnf install -y bat
+    ok "Aliases (cat, catp) activate automatically in zshrc"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# zoxide (smarter cd)
+# ─────────────────────────────────────────────────────────────────────────────
+install_zoxide() {
+    info "Installing zoxide..."
+    if command -v zoxide &>/dev/null; then
+        ok "zoxide already installed"
+        return
+    fi
+    sudo dnf install -y zoxide
+    ok "Shell hook (z, zi) activates automatically in zshrc"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# lazygit (terminal git UI)
+# ─────────────────────────────────────────────────────────────────────────────
+install_lazygit() {
+    info "Installing lazygit..."
+    if command -v lazygit &>/dev/null; then
+        ok "lazygit already installed"
+        return
+    fi
+    sudo dnf copr enable -y atim/lazygit 2>/dev/null || true
+    sudo dnf install -y lazygit
+    ok "lazygit installed — run 'lazygit' in any git repo"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# direnv (per-directory environment variables)
+# ─────────────────────────────────────────────────────────────────────────────
+install_direnv() {
+    info "Installing direnv..."
+    if command -v direnv &>/dev/null; then
+        ok "direnv already installed"
+        return
+    fi
+    sudo dnf install -y direnv
+    ok "Shell hook activates automatically in zshrc"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# tmux config
+# ─────────────────────────────────────────────────────────────────────────────
+install_tmux_config() {
+    info "Setting up tmux config..."
+    if ! command -v tmux &>/dev/null; then
+        sudo dnf install -y tmux
+    fi
+    link_file "$DOTFILES_DIR/tools/tmux/tmux.conf" "$HOME/.tmux.conf"
+    ok "tmux configured — prefix: Ctrl+a, splits: | and -, vi keys"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Taskwarrior (task management)
+# ─────────────────────────────────────────────────────────────────────────────
+install_taskwarrior() {
+    info "Installing Taskwarrior..."
+    if ! command -v task &>/dev/null; then
+        sudo dnf install -y task
+    fi
+    mkdir -p "$HOME/.local/share/task"
+    link_file "$DOTFILES_DIR/tools/taskwarrior/taskrc" "$HOME/.taskrc"
+    ok "Taskwarrior installed — run 'task add <description>' to start"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Butler daemon (ASUS Zenbook S 14 power/backlight management)
+# ─────────────────────────────────────────────────────────────────────────────
+install_butler() {
+    info "Installing Butler daemon..."
+    sudo dnf install -y brightnessctl power-profiles-daemon 2>/dev/null || true
+    mkdir -p "$HOME/.local/bin"
+    copy_file "$DOTFILES_DIR/tools/butler/butler-daemon" "$HOME/.local/bin/butler-daemon"
+    chmod +x "$HOME/.local/bin/butler-daemon"
+    mkdir -p "$HOME/.config/systemd/user"
+    copy_file "$DOTFILES_DIR/tools/butler/butler-daemon.service" \
+        "$HOME/.config/systemd/user/butler-daemon.service"
+    systemctl --user daemon-reload
+    systemctl --user enable --now butler-daemon.service 2>/dev/null || true
+    ok "Butler daemon installed — manages power profile + kbd backlight"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# All optional tools at once
+# ─────────────────────────────────────────────────────────────────────────────
+install_tools() {
+    install_eza
+    install_bat
+    install_zoxide
+    install_lazygit
+    install_direnv
+    install_tmux_config
+    install_taskwarrior
+    install_butler
+    install_email
+    echo ""
+    ok "All optional tools installed"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Terminal email (aerc + notmuch + lieer for Gmail)
+# ─────────────────────────────────────────────────────────────────────────────
+install_email() {
+    info "Installing terminal email (aerc + notmuch + lieer)..."
+
+    # Packages
+    sudo dnf install -y aerc notmuch w3m
+
+    # lieer (Gmail API sync)
+    if ! command -v gmi &>/dev/null; then
+        info "Installing lieer..."
+        uv tool install lieer 2>/dev/null || pip install --user lieer
+    else
+        ok "lieer already installed"
+    fi
+
+    # aerc config
+    mkdir -p "$HOME/.config/aerc/stylesets"
+    copy_file "$DOTFILES_DIR/tools/email/aerc/aerc.conf" "$HOME/.config/aerc/aerc.conf"
+    copy_file "$DOTFILES_DIR/tools/email/aerc/binds.conf" "$HOME/.config/aerc/binds.conf"
+    copy_file "$DOTFILES_DIR/tools/email/aerc/query-map" "$HOME/.config/aerc/query-map"
+    copy_file "$DOTFILES_DIR/tools/email/aerc/stylesets/catppuccin-mocha" \
+        "$HOME/.config/aerc/stylesets/catppuccin-mocha"
+
+    # accounts.conf — only copy template if no existing config
+    if [[ ! -f "$HOME/.config/aerc/accounts.conf" ]]; then
+        copy_file "$DOTFILES_DIR/tools/email/aerc/accounts.conf.template" \
+            "$HOME/.config/aerc/accounts.conf"
+        chmod 600 "$HOME/.config/aerc/accounts.conf"
+    else
+        info "accounts.conf already exists, not overwriting"
+    fi
+
+    # notmuch config
+    if [[ ! -f "$HOME/.notmuch-config" ]]; then
+        copy_file "$DOTFILES_DIR/tools/email/notmuch-config" "$HOME/.notmuch-config"
+    else
+        info "notmuch config already exists, not overwriting"
+    fi
+
+    # Mail directory
+    mkdir -p "$HOME/.mail/gmail"
+
+    echo ""
+    ok "Terminal email installed (aerc + notmuch + lieer)"
+    echo ""
+    info "Setup steps:"
+    echo "  1. Go to https://console.cloud.google.com/"
+    echo "  2. Create a project → enable Gmail API"
+    echo "  3. Create OAuth 2.0 credentials (Desktop app)"
+    echo "  4. Download client_secret.json to ~/.mail/gmail/"
+    echo "  5. cd ~/.mail/gmail && gmi init YOUR_EMAIL@gmail.com"
+    echo "  6. gmi pull                    (first sync — may take hours)"
+    echo "  7. notmuch new"
+    echo "  8. Edit ~/.config/aerc/accounts.conf (replace YOUR_NAME/YOUR_EMAIL)"
+    echo "  9. Edit ~/.notmuch-config (replace YOUR_NAME/YOUR_EMAIL)"
+    echo " 10. Run 'aerc'"
+    echo ""
+    echo "  Periodic sync:  cd ~/.mail/gmail && gmi sync && notmuch new"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Upwork Wayland + Screenshot Bridge (requires --upwork flag)
 # ─────────────────────────────────────────────────────────────────────────────
 install_scripts() {
     info "Installing Upwork Wayland support + screenshot bridge..."
@@ -486,8 +700,18 @@ run_all() {
     echo "  3. Run 'claude' to authenticate Claude Code"
     echo "  4. Run 'p10k configure' if the prompt looks wrong"
     echo ""
-    echo "  Optional:"
-    echo "    ./install.sh --upwork   # Upwork Wayland patch + screenshot bridge"
+    echo "  Optional tools (not installed by default):"
+    echo "    ./install.sh --tools        # All optional tools at once"
+    echo "    ./install.sh --eza          # Modern ls (aliases: ls, ll, la, lt)"
+    echo "    ./install.sh --bat          # Modern cat (aliases: cat, catp)"
+    echo "    ./install.sh --zoxide       # Smarter cd (commands: z, zi)"
+    echo "    ./install.sh --lazygit      # Terminal git UI"
+    echo "    ./install.sh --direnv       # Per-directory env vars"
+    echo "    ./install.sh --tmux         # tmux config"
+    echo "    ./install.sh --taskwarrior  # Task management CLI"
+    echo "    ./install.sh --butler       # ASUS power/backlight daemon"
+    echo "    ./install.sh --email        # Terminal email (aerc + notmuch + lieer)"
+    echo "    ./install.sh --upwork       # Upwork Wayland patch + screenshot bridge"
     echo ""
     echo "  Apps to install manually (not in Fedora repos):"
     echo "    - Brave Browser: https://brave.com/linux/"
@@ -518,10 +742,23 @@ for arg in "$@"; do
         --claude)    install_claude ;;
         --git)       install_git ;;
         --fonts)     install_fonts ;;
-        --upwork)    install_scripts ;;
+        --eza)         install_eza ;;
+        --bat)         install_bat ;;
+        --zoxide)      install_zoxide ;;
+        --lazygit)     install_lazygit ;;
+        --direnv)      install_direnv ;;
+        --tmux)        install_tmux_config ;;
+        --taskwarrior) install_taskwarrior ;;
+        --butler)      install_butler ;;
+        --email)       install_email ;;
+        --tools)       install_tools ;;
+        --upwork)      install_scripts ;;
         --help|-h)
-            echo "Usage: $0 [--all | --packages | --shell | --kitty | --kde | --claude | --git | --fonts | --upwork]"
+            echo "Usage: $0 [--all | --packages | --shell | --kitty | --kde | --claude | --git | --fonts]"
             echo "  No arguments = --all"
+            echo ""
+            echo "Optional tools (not in --all):"
+            echo "  --tools --eza --bat --zoxide --lazygit --direnv --tmux --taskwarrior --butler --email --upwork"
             ;;
         *)
             err "Unknown option: $arg"

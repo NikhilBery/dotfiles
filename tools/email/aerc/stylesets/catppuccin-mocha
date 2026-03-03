@@ -1,0 +1,79 @@
+# Catppuccin Mocha theme for aerc
+
+*.default = true
+*.normal = true
+
+# Title bar
+title.bg = #89b4fa
+title.fg = #1e1e2e
+title.bold = true
+
+# Status line
+statusline_default.bg = #1e1e2e
+statusline_default.fg = #a6adc8
+statusline_error.fg = #f38ba8
+statusline_error.bold = true
+statusline_warning.fg = #fab387
+statusline_success.fg = #a6e3a1
+
+# Tabs
+tab.bg = #1e1e2e
+tab.fg = #6c7086
+tab.selected.bg = #313244
+tab.selected.fg = #cdd6f4
+tab.selected.bold = true
+
+# Border
+border.fg = #313244
+
+# Headers
+header.fg = #89b4fa
+header.bold = true
+
+# Message list
+msglist_unread.bold = true
+msglist_unread.fg = #cdd6f4
+msglist_read.fg = #a6adc8
+msglist_flagged.fg = #f9e2af
+msglist_deleted.fg = #f38ba8
+msglist_marked.bg = #313244
+msglist_marked.fg = #b4befe
+msglist_result.fg = #a6e3a1
+
+# Directory list
+dirlist_unread.bold = true
+dirlist_unread.fg = #89b4fa
+dirlist_recent.fg = #a6e3a1
+
+# Selector
+selector_focused.bg = #89b4fa
+selector_focused.fg = #1e1e2e
+selector_focused.bold = true
+selector_chooser.bold = true
+selector_default.bold = true
+
+# Completion
+completion_default.bg = #313244
+completion_default.fg = #cdd6f4
+completion_gutter.bg = #313244
+completion_pill.bg = #89b4fa
+completion_pill.fg = #1e1e2e
+
+# Compose
+compose_header.fg = #89b4fa
+compose_header.bold = true
+compose_security_encryption.fg = #a6e3a1
+compose_security_sign.fg = #a6e3a1
+
+# Part switcher
+part_switcher.fg = #a6adc8
+part_switcher.selected.bg = #313244
+part_switcher.selected.fg = #cdd6f4
+part_switcher.selected.bold = true
+part_mimetype.fg = #6c7086
+
+# Error/warning/success
+*error.fg = #f38ba8
+*error.bold = true
+*warning.fg = #fab387
+*success.fg = #a6e3a1

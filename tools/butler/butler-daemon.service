@@ -1,0 +1,12 @@
+[Unit]
+Description=Butler daemon (ASUS Zenbook S 14 power/backlight management)
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/butler-daemon
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

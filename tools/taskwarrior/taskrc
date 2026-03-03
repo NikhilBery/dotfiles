@@ -1,0 +1,17 @@
+# Taskwarrior config
+
+data.location=~/.local/share/task
+
+# Defaults
+default.command=next limit:20
+weekstart=Monday
+dateformat=Y-M-D
+calendar.holidays=none
+
+# Urgency tweaks
+urgency.tags.coefficient=0.5
+urgency.annotations.coefficient=0.5
+urgency.project.coefficient=1.0
+
+# Reports
+report.next.columns=id,start.age,entry.age,depends,priority,project,tags,recur,scheduled.countdown,due.relative,until.remaining,description,urgency

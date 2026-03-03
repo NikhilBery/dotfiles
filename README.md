@@ -19,6 +19,22 @@ Personal system configuration for Fedora KDE.
 | **Custom Scripts** | Upwork Wayland patch + launcher, screenshot bridge service | |
 | **Systemd** | plasma-gnome-screenshot-bridge.service | User service |
 
+### Optional tools (not in default install)
+
+| Tool | What it does | Install flag |
+|------|-------------|-------------|
+| **eza** | Modern `ls` with icons, git status, tree view | `--eza` |
+| **bat** | Modern `cat` with syntax highlighting | `--bat` |
+| **zoxide** | Smarter `cd` — learns your frequent directories | `--zoxide` |
+| **lazygit** | Terminal UI for git | `--lazygit` |
+| **direnv** | Per-directory environment variables | `--direnv` |
+| **tmux** | Terminal multiplexer (Catppuccin theme, vi keys) | `--tmux` |
+| **Taskwarrior** | CLI task management | `--taskwarrior` |
+| **Butler** | ASUS Zenbook S 14 power profile + kbd backlight daemon | `--butler` |
+| **Email** | Terminal email: aerc + notmuch + lieer (Gmail API sync) | `--email` |
+
+Shell aliases for eza, bat, zoxide, and direnv activate automatically in zshrc when the tool is installed.
+
 ## KDE keyboard shortcuts (custom)
 
 - `Ctrl+Alt+T` — Launch Kitty
@@ -42,6 +58,7 @@ cd ~/Projects/dotfiles
 ## Selective install
 
 ```bash
+# Core (included in --all)
 ./install.sh --packages   # System packages only
 ./install.sh --shell      # zsh + oh-my-zsh + p10k + plugins
 ./install.sh --kitty      # Kitty terminal config
@@ -49,7 +66,19 @@ cd ~/Projects/dotfiles
 ./install.sh --claude     # Claude Code + statusline
 ./install.sh --git        # Git config + gh
 ./install.sh --fonts      # JetBrains Mono + MesloLGS NF + Noto Sans
-./install.sh --upwork     # Upwork Wayland patch + screenshot bridge (not in --all)
+
+# Optional tools (not in --all)
+./install.sh --tools        # All optional tools at once
+./install.sh --eza          # Modern ls with icons + git
+./install.sh --bat          # Modern cat with syntax highlighting
+./install.sh --zoxide       # Smarter cd (z, zi commands)
+./install.sh --lazygit      # Terminal git UI
+./install.sh --direnv       # Per-directory env vars
+./install.sh --tmux         # tmux config (Catppuccin, vi keys, Ctrl+a prefix)
+./install.sh --taskwarrior  # CLI task management
+./install.sh --butler       # ASUS Zenbook S 14 power/backlight daemon
+./install.sh --email        # Terminal email (aerc + notmuch + lieer for Gmail)
+./install.sh --upwork       # Upwork Wayland patch + screenshot bridge
 ```
 
 ## Post-install
@@ -63,18 +92,23 @@ cd ~/Projects/dotfiles
 
 ```
 dotfiles/
-  shell/          zshrc, zshenv, p10k.zsh, bashrc, npmrc
-  kitty/          kitty.conf
-  claude-code/    settings.json, claude-statusline
-  kde/            kdeglobals, kwinrc, kglobalshortcutsrc, mimeapps.list,
-                  plasma-custom-shortcuts.khotkeys, kded5rc, gtkrc-2.0,
-                  Kvantum/, plasma/
-  git/            gitconfig, gitignore_global
-  gh/             config.yml, hosts.yml
-  fonts/          MesloLGS NF .ttf, fonts.conf
-  scripts/upwork/ patch-upwork, upwork-wayland
-  systemd/        plasma-gnome-screenshot-bridge.service
-  install.sh      Setup script
+  shell/              zshrc, zshenv, p10k.zsh, bashrc, npmrc
+  kitty/              kitty.conf
+  claude-code/        settings.json, claude-statusline
+  kde/                kdeglobals, kwinrc, kglobalshortcutsrc, mimeapps.list,
+                      plasma-custom-shortcuts.khotkeys, kded5rc, gtkrc-2.0,
+                      Kvantum/, plasma/
+  git/                gitconfig, gitignore_global
+  gh/                 config.yml, hosts.yml
+  fonts/              MesloLGS NF .ttf, fonts.conf
+  tools/
+    tmux/             tmux.conf (Catppuccin Mocha, vi keys, Ctrl+a prefix)
+    taskwarrior/      taskrc
+    butler/           butler-daemon, butler-daemon.service
+    email/            aerc config, notmuch config, Catppuccin styleset, query-map
+  scripts/upwork/     patch-upwork, upwork-wayland, upwork.desktop
+  systemd/            plasma-gnome-screenshot-bridge.service
+  install.sh          Setup script
 ```
 
 ## Backups

@@ -1,0 +1,19 @@
+# notmuch config for lieer + aerc
+# Edit [user] section with your name and email
+
+[database]
+path = ~/.mail/gmail
+
+[user]
+name = YOUR_NAME
+primary_email = YOUR_EMAIL@gmail.com
+
+[new]
+tags = new
+ignore = .json;.lock
+
+[search]
+exclude_tags = deleted;spam
+
+[maildir]
+synchronize_flags = true

@@ -1,0 +1,169 @@
+#!/usr/bin/env python3
+"""Butler daemon for ASUS Zenbook S 14 UX5406SA.
+
+Auto-manages:
+- Power profile switching based on AC/battery state
+- Keyboard backlight (dims on battery, off on critical)
+- Battery level notifications
+
+Hardware: ASUS Zenbook S 14 UX5406SA, Intel Arc (Lunar Lake)
+Uses: powerprofilesctl, brightnessctl (no root needed)
+"""
+
+import subprocess
+import time
+import signal
+import sys
+from pathlib import Path
+
+# ─── Configuration ───────────────────────────────────────────────────────────
+POLL_INTERVAL = 30  # seconds
+
+# Power profile thresholds (battery %)
+PROFILE_SAVER_BELOW = 20
+PROFILE_BALANCED_BELOW = 80
+# Above 80% or on AC → performance
+
+# Keyboard backlight levels (asus::kbd_backlight is 0-3)
+KBD_AC = 3
+KBD_BATTERY = 1
+KBD_LOW = 0
+
+BATTERY_CRITICAL = 10
+BATTERY_LOW = 20
+
+# ─── Hardware paths ──────────────────────────────────────────────────────────
+KBD_DEVICE = "asus::kbd_backlight"
+
+def find_battery():
+    for p in Path("/sys/class/power_supply").iterdir():
+        if p.name.startswith("BAT"):
+            return p
+    return None
+
+def find_ac():
+    for name in ["AC0", "ADP0", "ADP1", "ACAD"]:
+        p = Path(f"/sys/class/power_supply/{name}")
+        if p.exists():
+            return p
+    for p in Path("/sys/class/power_supply").iterdir():
+        if not p.name.startswith("BAT"):
+            t = p / "type"
+            if t.exists() and t.read_text().strip() == "Mains":
+                return p
+    return None
+
+BAT_PATH = find_battery()
+AC_PATH = find_ac()
+
+# ─── State ───────────────────────────────────────────────────────────────────
+_last_profile = None
+_last_kbd = None
+_critical_notified = False
+_low_notified = False
+
+# ─── Helpers ─────────────────────────────────────────────────────────────────
+def run(cmd):
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return None
+
+def read_sysfs(path):
+    try:
+        return Path(path).read_text().strip()
+    except OSError:
+        return None
+
+def notify(title, body):
+    run(["notify-send", "-a", "Butler", title, body])
+
+def get_battery():
+    if not BAT_PATH:
+        return None
+    val = read_sysfs(BAT_PATH / "capacity")
+    return int(val) if val else None
+
+def is_on_ac():
+    if AC_PATH:
+        return read_sysfs(AC_PATH / "online") == "1"
+    if BAT_PATH:
+        status = read_sysfs(BAT_PATH / "status")
+        return status in ("Charging", "Full", "Not charging")
+    return True
+
+def set_profile(profile):
+    """Set power profile via powerprofilesctl (D-Bus, no root needed)."""
+    global _last_profile
+    if profile == _last_profile:
+        return
+    result = run(["powerprofilesctl", "set", profile])
+    if result and result.returncode == 0:
+        _last_profile = profile
+        notify(f"Power: {profile}", f"Switched to {profile}")
+
+def set_kbd(level):
+    """Set keyboard backlight via brightnessctl (no root needed)."""
+    global _last_kbd
+    if level == _last_kbd:
+        return
+    result = run(["brightnessctl", "-d", KBD_DEVICE, "set", str(level)])
+    if result and result.returncode == 0:
+        _last_kbd = level
+
+def tick():
+    global _critical_notified, _low_notified
+
+    on_ac = is_on_ac()
+    battery = get_battery()
+
+    # Power profile
+    if on_ac:
+        set_profile("performance")
+        _critical_notified = False
+        _low_notified = False
+    elif battery is not None:
+        if battery < PROFILE_SAVER_BELOW:
+            set_profile("power-saver")
+        elif battery < PROFILE_BALANCED_BELOW:
+            set_profile("balanced")
+        else:
+            set_profile("performance")
+
+    # Keyboard backlight
+    if on_ac:
+        set_kbd(KBD_AC)
+    elif battery is not None and battery < BATTERY_LOW:
+        set_kbd(KBD_LOW)
+    else:
+        set_kbd(KBD_BATTERY)
+
+    # Battery warnings
+    if not on_ac and battery is not None:
+        if battery <= BATTERY_CRITICAL and not _critical_notified:
+            notify("Battery Critical!", f"{battery}% — plug in now")
+            _critical_notified = True
+        elif battery <= BATTERY_LOW and not _low_notified:
+            notify("Battery Low", f"{battery}% — consider plugging in")
+            _low_notified = True
+
+def main():
+    if not BAT_PATH:
+        print("Warning: no battery found", file=sys.stderr)
+    if not AC_PATH:
+        print("Warning: no AC adapter found", file=sys.stderr)
+
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+    signal.signal(signal.SIGINT, lambda *_: sys.exit(0))
+
+    print(f"Butler started (poll: {POLL_INTERVAL}s, bat: {BAT_PATH}, ac: {AC_PATH})")
+
+    while True:
+        try:
+            tick()
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+        time.sleep(POLL_INTERVAL)
+
+if __name__ == "__main__":
+    main()
