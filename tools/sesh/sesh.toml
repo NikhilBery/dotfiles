@@ -1,0 +1,7 @@
+[[session]]
+name = "dotfiles"
+path = "~/Projects/dotfiles"
+
+[[directory_arrow]]
+path = "~/Projects"
+depth = 1

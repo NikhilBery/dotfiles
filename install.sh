@@ -578,6 +578,10 @@ install_tmux_config() {
         ok "sesh already installed"
     fi
 
+    # sesh config
+    mkdir -p "$HOME/.config/sesh"
+    link_file "$DOTFILES_DIR/tools/sesh/sesh.toml" "$HOME/.config/sesh/sesh.toml"
+
     ok "tmux configured — prefix: Ctrl+a, splits: | and -, vi keys, sesh: C-a C-s"
 }
 

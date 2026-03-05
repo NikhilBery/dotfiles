@@ -268,7 +268,7 @@ if command -v sesh &>/dev/null; then
       exec </dev/tty
       exec <&1
       local session
-      session=$(sesh list -t | fzf --ansi --height 40% --reverse --border-label ' sesh ' --border --prompt '> ')
+      session=$(sesh list -c -t -i | fzf --ansi --height 40% --reverse --border-label ' sesh ' --border --prompt '> ')
       zle reset-prompt > /dev/null 2>&1 || true
       [[ -z "$session" ]] && return
       sesh connect $session
@@ -277,5 +277,3 @@ if command -v sesh &>/dev/null; then
   zle -N sesh-sessions
   bindkey '^s' sesh-sessions
 fi
-
-export PATH="$HOME/.cargo/bin:$PATH"
