@@ -1,0 +1,6 @@
+[Unit]
+Description=Push local tag changes (trash, archive, etc.) to Gmail via lieer
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c 'cd ~/.mail/gmail && gmi push'

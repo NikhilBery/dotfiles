@@ -1,0 +1,6 @@
+[Unit]
+Description=Pull new mail from Gmail via lieer
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c 'cd ~/.mail/gmail && gmi pull && notmuch new'

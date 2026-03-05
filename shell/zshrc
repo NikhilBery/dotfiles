@@ -113,6 +113,11 @@ setopt INTERACTIVE_COMMENTS # Allow comments in interactive shells
 # fzf configuration
 export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border'
 export FZF_CTRL_R_OPTS='--sort --exact'
+if command -v fd &>/dev/null; then
+  export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+  export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+  export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
+fi
 
 # Compilation flags
 # export ARCHFLAGS="-arch $(uname -m)"
@@ -169,6 +174,18 @@ alias ga='git add'
 alias gc='git commit'
 alias gp='git push'
 alias gl='git log --oneline -10'
+alias lg='lazygit'
+
+# Docker Compose shortcuts
+alias dcuf='docker compose up --build -d && docker compose logs -f'
+alias dcbd='docker compose up --build -d'
+alias dclf='docker compose logs -f'
+alias dcd='docker compose down'
+
+# Utilities
+alias whatismyip='curl -sf ipinfo.io | jq -r .ip'
+alias icat='kitten icat'
+alias ff='fd --hidden --follow'
 
 # Quick config edits
 alias zshrc='$EDITOR ~/.zshrc'
@@ -208,6 +225,11 @@ preexec_functions+=(_kitty_set_title_preexec)
 
 alias kf="kitty --start-as=fullscreen"
 
+# ─── Completion styling ─────────────────────────────────────────────────────
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'ls --color $realpath'
+zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'ls --color $realpath'
+
 # ─── Optional tool integrations ──────────────────────────────────────────────
 # These activate automatically when the tools are installed.
 # Install via: ./install.sh --eza, --bat, --zoxide, --lazygit, --direnv, etc.
@@ -222,7 +244,7 @@ fi
 
 # bat (modern cat replacement)
 if command -v bat &>/dev/null; then
-  alias cat='bat --paging=never'
+  alias cat='bat --paging=never --style=plain'
   alias catp='bat'
   export MANPAGER="sh -c 'col -bx | bat -l man -p'"
 fi
@@ -230,11 +252,30 @@ fi
 # zoxide (smarter cd)
 if command -v zoxide &>/dev/null; then
   eval "$(zoxide init zsh)"
+  alias cd='z'
+  alias zi='zoxide query -i'
 fi
 
 # direnv (per-directory env vars)
 if command -v direnv &>/dev/null; then
   eval "$(direnv hook zsh)"
+fi
+
+# sesh (tmux session manager)
+if command -v sesh &>/dev/null; then
+  function sesh-sessions() {
+    {
+      exec </dev/tty
+      exec <&1
+      local session
+      session=$(sesh list -t | fzf --ansi --height 40% --reverse --border-label ' sesh ' --border --prompt '> ')
+      zle reset-prompt > /dev/null 2>&1 || true
+      [[ -z "$session" ]] && return
+      sesh connect $session
+    }
+  }
+  zle -N sesh-sessions
+  bindkey '^s' sesh-sessions
 fi
 
 export PATH="$HOME/.cargo/bin:$PATH"

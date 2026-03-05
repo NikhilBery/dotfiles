@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Shortcuts Cheatsheet
+Comment=Show keyboard shortcuts cheatsheet popup
+Exec=show-shortcuts
+Icon=preferences-desktop-keyboard
+NoDisplay=true
+Categories=Utility;

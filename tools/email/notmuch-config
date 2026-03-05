@@ -13,7 +13,7 @@ tags = new
 ignore = .json;.lock
 
 [search]
-exclude_tags = deleted;spam
+exclude_tags = trash;spam
 
 [maildir]
 synchronize_flags = true

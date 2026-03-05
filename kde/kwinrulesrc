@@ -1,0 +1,26 @@
+[General]
+count=1
+
+[1]
+Description=Shortcuts Cheatsheet Popup
+wmclass=shortcuts-cheatsheet
+wmclasscomplete=false
+wmclassmatch=1
+above=true
+aboverule=2
+center=true
+centerrule=2
+noborder=true
+noborderrule=2
+placement=6
+placementrule=2
+size=900,700
+sizerule=2
+skippager=true
+skippagerrule=2
+skipswitcher=true
+skipswitcherrule=2
+skiptaskbar=true
+skiptaskbarrule=2
+type=0
+typerule=2

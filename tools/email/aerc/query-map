@@ -3,6 +3,6 @@ Unread = tag:unread
 Sent = tag:sent
 Drafts = tag:draft
 Starred = tag:flagged
-Archive = NOT tag:inbox AND NOT tag:trash AND NOT tag:spam
+Archive = NOT tag:inbox AND NOT tag:trash AND NOT tag:spam AND NOT tag:new
 Spam = tag:spam
 Trash = tag:trash

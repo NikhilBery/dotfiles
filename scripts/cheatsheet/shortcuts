@@ -1,0 +1,311 @@
+#!/usr/bin/env bash
+# Shortcuts cheatsheet — auto-generated from actual config files
+# Parses: kitty.conf, tmux.conf, aerc binds.conf, zshrc aliases, KDE shortcuts
+
+# ─── Catppuccin Mocha ANSI ──────────────────────────────────────────────────
+R='\033[0m'
+DIM='\033[2m'
+BOLD='\033[1m'
+BLUE='\033[38;2;137;180;250m'
+MAUVE='\033[38;2;203;166;247m'
+GREEN='\033[38;2;166;227;161m'
+PEACH='\033[38;2;250;179;135m'
+YELLOW='\033[38;2;249;226;175m'
+TEXT='\033[38;2;205;214;244m'
+SUBTEXT='\033[38;2;166;173;200m'
+SURFACE='\033[38;2;49;50;68m'
+
+header() {
+    printf "\n${SURFACE}────────────────────────────────────────────────────────────────${R}\n"
+    printf "  ${MAUVE}${BOLD}%s  %s${R}\n" "$1" "$2"
+    printf "${SURFACE}────────────────────────────────────────────────────────────────${R}\n"
+}
+
+row() {
+    printf "  ${YELLOW}%-28s${R} ${TEXT}%-38s${R} ${DIM}${SUBTEXT}[%s]${R}\n" "$1" "$2" "$3"
+}
+
+# ─── KDE Plasma (from kglobalshortcutsrc) ────────────────────────────────────
+parse_kde() {
+    header "" "KDE Plasma"
+    local cfg="$HOME/.config/kglobalshortcutsrc"
+    if [[ -f "$cfg" ]]; then
+        # Extract key=shortcut,fallback,description lines, skip none/empty
+        while IFS='=' read -r key value; do
+            [[ "$key" =~ ^[\[#] ]] && continue
+            [[ -z "$value" ]] && continue
+            local shortcut desc
+            shortcut=$(echo "$value" | cut -d',' -f1)
+            desc=$(echo "$value" | cut -d',' -f3-)
+            [[ "$shortcut" == "none" || "$shortcut" == "" ]] && continue
+            [[ -z "$desc" ]] && continue
+            # Clean up shortcut display
+            shortcut="${shortcut//Meta+/Meta + }"
+            shortcut="${shortcut//Ctrl+/Ctrl + }"
+            shortcut="${shortcut//Alt+/Alt + }"
+            shortcut="${shortcut//Shift+/Shift + }"
+            row "$shortcut" "$desc" "KDE"
+        done < "$cfg"
+    else
+        row "(no config found)" "$cfg" "KDE"
+    fi
+}
+
+# ─── Kitty (from kitty.conf — map lines) ────────────────────────────────────
+parse_kitty() {
+    header "󰄛" "Kitty Terminal"
+    local cfg="$HOME/.config/kitty/kitty.conf"
+    if [[ -f "$cfg" ]]; then
+        while IFS= read -r line; do
+            # Match: map <key> <action> [args...]
+            if [[ "$line" =~ ^map[[:space:]]+([^[:space:]]+)[[:space:]]+(.+)$ ]]; then
+                local key="${BASH_REMATCH[1]}"
+                local action="${BASH_REMATCH[2]}"
+                # Pretty-print modifier keys
+                key="${key//ctrl+/Ctrl+}"
+                key="${key//alt+/Alt+}"
+                key="${key//shift+/Shift+}"
+                key="${key//super+/Meta+}"
+                # Trim inline comments
+                action="${action%%#*}"
+                action="${action%"${action##*[![:space:]]}"}"
+                row "$key" "$action" "Kitty"
+            fi
+        done < "$cfg"
+    else
+        row "(no config found)" "$cfg" "Kitty"
+    fi
+}
+
+# ─── Tmux (from tmux.conf — bind/bind-key lines) ─────────────────────────────
+parse_tmux() {
+    header "" "Tmux  (prefix: Ctrl+A)"
+    local cfg="$HOME/.config/tmux/tmux.conf"
+    [[ ! -f "$cfg" ]] && cfg="$HOME/.tmux.conf"
+    if [[ -f "$cfg" ]]; then
+        while IFS= read -r line; do
+            # Skip comments and empty lines
+            [[ "$line" =~ ^[[:space:]]*# ]] && continue
+            [[ -z "${line// }" ]] && continue
+
+            local key="" action="" prefix="C-a "
+
+            # bind-key -n (no prefix)
+            if [[ "$line" =~ ^bind(-key)?[[:space:]]+-n[[:space:]]+([^[:space:]]+)[[:space:]]+(.+)$ ]]; then
+                key="${BASH_REMATCH[2]}"
+                action="${BASH_REMATCH[3]}"
+                prefix=""
+            # bind -T copy-mode-vi
+            elif [[ "$line" =~ ^bind[[:space:]]+-T[[:space:]]+copy-mode-vi[[:space:]]+([^[:space:]]+)[[:space:]]+(.+)$ ]]; then
+                key="${BASH_REMATCH[1]}"
+                action="${BASH_REMATCH[2]}"
+                prefix="(copy) "
+            # bind-key with -r (repeat)
+            elif [[ "$line" =~ ^bind(-key)?[[:space:]]+-r[[:space:]]+([^[:space:]]+)[[:space:]]+(.+)$ ]]; then
+                key="${BASH_REMATCH[2]}"
+                action="${BASH_REMATCH[3]}"
+            # Regular bind/bind-key
+            elif [[ "$line" =~ ^bind(-key)?[[:space:]]+([^[:space:]]+)[[:space:]]+(.+)$ ]]; then
+                key="${BASH_REMATCH[2]}"
+                action="${BASH_REMATCH[3]}"
+            else
+                continue
+            fi
+
+            # Clean up action: trim trailing comments, truncate long args
+            action="${action%%\\;*}"
+            action="${action%%#*}"
+            action="${action%"${action##*[![:space:]]}"}"
+            # Trim #{pane_current_path} noise and dangling quotes
+            action="${action// -c \"*pane_current_path*\"/}"
+            action="${action//\"/}"
+            # Human-readable translations
+            case "$action" in
+                split-window\ -h*)   action="Split vertical" ;;
+                split-window\ -v*)   action="Split horizontal" ;;
+                select-pane\ -L)     action="Focus pane left" ;;
+                select-pane\ -R)     action="Focus pane right" ;;
+                select-pane\ -U)     action="Focus pane up" ;;
+                select-pane\ -D)     action="Focus pane down" ;;
+                resize-pane\ -L*)    action="Resize pane left" ;;
+                resize-pane\ -R*)    action="Resize pane right" ;;
+                resize-pane\ -U*)    action="Resize pane up" ;;
+                resize-pane\ -D*)    action="Resize pane down" ;;
+                new-window*)         action="New window" ;;
+                select-window\ -t*)  action="Go to window ${action##*-t }" ;;
+                send-prefix)         action="Send prefix" ;;
+                command-prompt*)     action="Rename window" ;;
+                send-keys\ -X\ begin-selection) action="Begin selection" ;;
+                send-keys\ -X\ copy-pipe*) action="Yank to clipboard" ;;
+                send-keys\ C-l*)     action="Clear screen + history" ;;
+                source-file*)        action="Reload config" ;;
+                display-popup\ -d*)  action="Lazygit popup" ;;
+                *sesh\ connect*)     action="Sesh session picker" ;;
+                *sesh\ last*)        action="Sesh last session" ;;
+            esac
+            # Truncate very long remaining actions
+            [[ ${#action} -gt 42 ]] && action="${action:0:39}..."
+
+            # Pretty-print some keys
+            key="${key//C-/Ctrl+}"
+            key="${key//M-/Alt+}"
+
+            row "${prefix}${key}" "$action" "Tmux"
+        done < "$cfg"
+    else
+        row "(no config found)" "~/.config/tmux/tmux.conf" "Tmux"
+    fi
+}
+
+# ─── Shell aliases & functions (from zshrc) ──────────────────────────────────
+parse_shell() {
+    header "" "Shell  (Zsh Aliases & Keybinds)"
+    local cfg="$HOME/.zshrc"
+    if [[ -f "$cfg" ]]; then
+        # Parse aliases
+        while IFS= read -r line; do
+            if [[ "$line" =~ ^[[:space:]]*alias[[:space:]]+([^=]+)=[\'\"]?(.+)[\'\"]?$ ]]; then
+                local name="${BASH_REMATCH[1]}"
+                local val="${BASH_REMATCH[2]}"
+                val="${val%\"}"
+                val="${val%\'}"
+                row "$name" "$val" "Alias"
+            fi
+        done < "$cfg"
+
+        # Parse bindkey
+        while IFS= read -r line; do
+            if [[ "$line" =~ ^[[:space:]]*bindkey[[:space:]]+[\'\"]([^\'\"]+)[\'\"][[:space:]]+(.+)$ ]]; then
+                local key="${BASH_REMATCH[1]}"
+                local action="${BASH_REMATCH[2]}"
+                key="${key//^s/Ctrl+S}"
+                key="${key//^p/Ctrl+P}"
+                key="${key//^n/Ctrl+N}"
+                key="${key//^ /Ctrl+Space}"
+                row "$key" "$action" "Zsh"
+            fi
+        done < "$cfg"
+
+        # Parse functions (just names)
+        while IFS= read -r line; do
+            if [[ "$line" =~ ^([a-z][a-z0-9_-]+)\(\)[[:space:]]*\{ ]]; then
+                row "${BASH_REMATCH[1]}" "(function)" "Func"
+            fi
+        done < "$cfg"
+    else
+        row "(no config found)" "$cfg" "Shell"
+    fi
+}
+
+# ─── Lazygit (built-in defaults + config) ────────────────────────────────────
+parse_lazygit() {
+    header "󰊢" "Lazygit  (default keybinds)"
+    # Lazygit keybinds are compiled in, not in config. Show the standard ones.
+    row "Space"           "Stage / unstage file" "Lazygit"
+    row "a"               "Stage all" "Lazygit"
+    row "c"               "Commit" "Lazygit"
+    row "C"               "Commit with editor" "Lazygit"
+    row "p / P"           "Pull / push" "Lazygit"
+    row "d"               "Discard changes" "Lazygit"
+    row "s"               "Squash commit" "Lazygit"
+    row "r / R"           "Reword / rename branch" "Lazygit"
+    row "e"               "Edit file" "Lazygit"
+    row "n"               "New branch" "Lazygit"
+    row "1-5"             "Switch panel" "Lazygit"
+    row "[ / ]"           "Prev / next tab" "Lazygit"
+    row "?"               "Help / all keybinds" "Lazygit"
+    row "q"               "Quit" "Lazygit"
+}
+
+# ─── Aerc (from binds.conf) ─────────────────────────────────────────────────
+parse_aerc() {
+    header "󰇮" "Aerc  (Terminal Email)"
+    local cfg="$HOME/.config/aerc/binds.conf"
+    if [[ -f "$cfg" ]]; then
+        local section=""
+        while IFS= read -r line; do
+            # Track sections
+            if [[ "$line" =~ ^\[([^\]]+)\] ]]; then
+                section="${BASH_REMATCH[1]}"
+                continue
+            fi
+            # Skip comments and empty
+            [[ "$line" =~ ^[[:space:]]*# ]] && continue
+            [[ -z "${line// }" ]] && continue
+
+            if [[ "$line" =~ ^([^=]+)=[[:space:]]*(.+)$ ]]; then
+                local key="${BASH_REMATCH[1]}"
+                local action="${BASH_REMATCH[2]}"
+                key="${key%"${key##*[![:space:]]}"}"
+                # Clean aerc command syntax
+                action="${action//<Enter>/}"
+                action="${action//<space>/ …}"
+                action="${action//:/}"
+                # Add section context for non-messages
+                local ctx="Aerc"
+                [[ "$section" != "messages" ]] && ctx="Aerc:${section}"
+                row "$key" "$action" "$ctx"
+            fi
+        done < "$cfg"
+    else
+        row "(no config found)" "$cfg" "Aerc"
+    fi
+}
+
+# ─── Superfile (built-in defaults) ───────────────────────────────────────────
+parse_superfile() {
+    if command -v spf &>/dev/null || command -v superfile &>/dev/null; then
+        header "󰉋" "Superfile"
+        local hotkeys="$HOME/.config/superfile/hotkeys.toml"
+        if [[ -f "$hotkeys" ]]; then
+            while IFS='=' read -r key val; do
+                [[ "$key" =~ ^[[:space:]]*# ]] && continue
+                [[ -z "${key// }" ]] && continue
+                key="${key// /}"
+                val="${val// /}"
+                val="${val//\"/}"
+                val="${val//[\[\]]/}"
+                [[ -z "$val" ]] && continue
+                row "$val" "$key" "Superfile"
+            done < "$hotkeys"
+        else
+            # Fallback to common defaults
+            row "h/j/k/l"          "Navigate" "Superfile"
+            row "Enter"             "Open file/dir" "Superfile"
+            row "q"                 "Quit" "Superfile"
+            row "Space"             "Select file" "Superfile"
+            row "c / x / p"        "Copy / cut / paste" "Superfile"
+            row "d / D"             "Trash / delete" "Superfile"
+            row "n / N"             "New file / dir" "Superfile"
+            row "r"                 "Rename" "Superfile"
+            row "/"                 "Search" "Superfile"
+            row "."                 "Toggle hidden" "Superfile"
+            row "z"                 "Zoxide jump" "Superfile"
+        fi
+    fi
+}
+
+# ─── Run all parsers ─────────────────────────────────────────────────────────
+# KDE shortcuts are very noisy (hundreds of entries), show a curated subset
+# plus all auto-parsed ones from our configs
+header "" "KDE Plasma  (curated — full list: System Settings > Shortcuts)"
+row "Meta"                      "App launcher" "KDE"
+row "Meta + /"                  "Shortcuts cheatsheet" "KDE"
+row "Meta + L"                  "Lock screen" "KDE"
+row "Meta + D"                  "Show desktop" "KDE"
+row "Meta + E"                  "Dolphin file manager" "KDE"
+row "Meta + PgUp/PgDn"         "Switch virtual desktop" "KDE"
+row "Meta + Arrow"              "Tile window" "KDE"
+row "Ctrl + Alt + T"            "Terminal (Kitty)" "KDE"
+row "Alt + F4"                  "Close window" "KDE"
+row "Alt + Tab"                 "Switch windows" "KDE"
+row "PrintScreen"               "Screenshot (Spectacle)" "KDE"
+
+parse_kitty
+parse_tmux
+parse_shell
+parse_lazygit
+parse_aerc
+parse_superfile
+
+printf "\n"

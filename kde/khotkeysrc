@@ -1,0 +1,28 @@
+[Data]
+DataCount=1
+
+[Data_1]
+Comment=Shortcuts Cheatsheet
+Enabled=true
+Name=Shortcuts Cheatsheet
+Type=SIMPLE_ACTION_DATA
+
+[Data_1Conditions]
+Comment=
+ConditionsCount=0
+
+[Data_1Actions]
+ActionsCount=1
+
+[Data_1Actions0]
+CommandURL=show-shortcuts
+Type=COMMAND_URL
+
+[Data_1Triggers]
+Comment=Simple_action
+TriggersCount=1
+
+[Data_1Triggers0]
+Key=Meta+/
+Type=SHORTCUT
+UUID={d4e5f6a7-b8c9-4d0e-a1b2-c3d4e5f6a7b8}

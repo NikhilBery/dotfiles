@@ -358,7 +358,22 @@ install_shell() {
     mkdir -p "$HOME/.npm-global"
     mkdir -p "$HOME/.local/bin"
 
-    ok "Shell setup done"
+    # Shortcuts cheatsheet
+    link_file "$DOTFILES_DIR/scripts/cheatsheet/shortcuts" "$HOME/.local/bin/shortcuts"
+    link_file "$DOTFILES_DIR/scripts/cheatsheet/show-shortcuts" "$HOME/.local/bin/show-shortcuts"
+    copy_file "$DOTFILES_DIR/scripts/cheatsheet/show-shortcuts.desktop" "$HOME/.local/share/applications/show-shortcuts.desktop"
+    update-desktop-database "$HOME/.local/share/applications/" 2>/dev/null || true
+
+    # KDE window rule for cheatsheet popup
+    if [[ -f "$DOTFILES_DIR/kde/kwinrulesrc" ]]; then
+        copy_file "$DOTFILES_DIR/kde/kwinrulesrc" "$HOME/.config/kwinrulesrc"
+        dbus-send --type=signal --dest=org.kde.KWin /KWin org.kde.KWin.reloadConfig 2>/dev/null || true
+    fi
+
+    # Meta+/ shortcut for cheatsheet (via khotkeys — works after login)
+    copy_file "$DOTFILES_DIR/kde/khotkeysrc" "$HOME/.config/khotkeysrc"
+
+    ok "Shell setup done (Meta+/ opens shortcuts cheatsheet — needs login)"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -490,13 +505,21 @@ install_zoxide() {
 # ─────────────────────────────────────────────────────────────────────────────
 install_lazygit() {
     info "Installing lazygit..."
-    if command -v lazygit &>/dev/null; then
+    if ! command -v lazygit &>/dev/null; then
+        sudo dnf copr enable -y atim/lazygit 2>/dev/null || true
+        sudo dnf install -y lazygit
+    else
         ok "lazygit already installed"
-        return
     fi
-    sudo dnf copr enable -y atim/lazygit 2>/dev/null || true
-    sudo dnf install -y lazygit
-    ok "lazygit installed — run 'lazygit' in any git repo"
+
+    # delta — better git diffs (used by lazygit pager)
+    if ! command -v delta &>/dev/null; then
+        sudo dnf install -y git-delta 2>/dev/null || true
+    fi
+
+    mkdir -p "$HOME/.config/lazygit"
+    link_file "$DOTFILES_DIR/tools/lazygit/config.yml" "$HOME/.config/lazygit/config.yml"
+    ok "lazygit configured — Catppuccin colors, delta pager"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -513,6 +536,26 @@ install_direnv() {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# superfile (terminal file manager)
+# ─────────────────────────────────────────────────────────────────────────────
+install_superfile() {
+    info "Installing superfile..."
+    if command -v spf &>/dev/null; then
+        ok "superfile already installed"
+    else
+        if command -v go &>/dev/null; then
+            go install github.com/yorukot/superfile@latest
+        else
+            warn "Go not found — install superfile manually: go install github.com/yorukot/superfile@latest"
+            return 1
+        fi
+    fi
+    mkdir -p "$HOME/.config/superfile"
+    link_file "$DOTFILES_DIR/tools/superfile/config.toml" "$HOME/.config/superfile/config.toml"
+    ok "superfile configured — Catppuccin theme, zoxide integration"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # tmux config
 # ─────────────────────────────────────────────────────────────────────────────
 install_tmux_config() {
@@ -520,8 +563,22 @@ install_tmux_config() {
     if ! command -v tmux &>/dev/null; then
         sudo dnf install -y tmux
     fi
-    link_file "$DOTFILES_DIR/tools/tmux/tmux.conf" "$HOME/.tmux.conf"
-    ok "tmux configured — prefix: Ctrl+a, splits: | and -, vi keys"
+    mkdir -p "$HOME/.config/tmux"
+    link_file "$DOTFILES_DIR/tools/tmux/tmux.conf" "$HOME/.config/tmux/tmux.conf"
+
+    # sesh — tmux session manager
+    if ! command -v sesh &>/dev/null; then
+        if command -v go &>/dev/null; then
+            info "Installing sesh via go install..."
+            go install github.com/joshmedeski/sesh@latest
+        else
+            warn "Go not found — install sesh manually: go install github.com/joshmedeski/sesh@latest"
+        fi
+    else
+        ok "sesh already installed"
+    fi
+
+    ok "tmux configured — prefix: Ctrl+a, splits: | and -, vi keys, sesh: C-a C-s"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -564,6 +621,7 @@ install_tools() {
     install_lazygit
     install_direnv
     install_tmux_config
+    install_superfile
     install_taskwarrior
     install_butler
     install_email
@@ -605,15 +663,25 @@ install_email() {
         info "accounts.conf already exists, not overwriting"
     fi
 
-    # notmuch config
-    if [[ ! -f "$HOME/.notmuch-config" ]]; then
-        copy_file "$DOTFILES_DIR/tools/email/notmuch-config" "$HOME/.notmuch-config"
+    # notmuch config (XDG location)
+    local notmuch_dir="$HOME/.config/notmuch/default"
+    if [[ ! -f "$notmuch_dir/config" ]]; then
+        mkdir -p "$notmuch_dir"
+        copy_file "$DOTFILES_DIR/tools/email/notmuch-config" "$notmuch_dir/config"
     else
         info "notmuch config already exists, not overwriting"
     fi
 
     # Mail directory
     mkdir -p "$HOME/.mail/gmail"
+
+    # Pull timer (new mail every 5 min) + push timer (tag changes every 2 hours)
+    mkdir -p "$HOME/.config/systemd/user"
+    copy_file "$DOTFILES_DIR/tools/email/mail-sync.service" "$HOME/.config/systemd/user/mail-sync.service"
+    copy_file "$DOTFILES_DIR/tools/email/mail-sync.timer" "$HOME/.config/systemd/user/mail-sync.timer"
+    copy_file "$DOTFILES_DIR/tools/email/mail-push.service" "$HOME/.config/systemd/user/mail-push.service"
+    copy_file "$DOTFILES_DIR/tools/email/mail-push.timer" "$HOME/.config/systemd/user/mail-push.timer"
+    systemctl --user daemon-reload
 
     echo ""
     ok "Terminal email installed (aerc + notmuch + lieer)"
@@ -627,10 +695,14 @@ install_email() {
     echo "  6. gmi pull                    (first sync — may take hours)"
     echo "  7. notmuch new"
     echo "  8. Edit ~/.config/aerc/accounts.conf (replace YOUR_NAME/YOUR_EMAIL)"
-    echo "  9. Edit ~/.notmuch-config (replace YOUR_NAME/YOUR_EMAIL)"
-    echo " 10. Run 'aerc'"
+    echo "  9. Edit ~/.config/notmuch/default/config (replace YOUR_NAME/YOUR_EMAIL)"
+    echo " 10. systemctl --user enable --now mail-sync.timer mail-push.timer"
+    echo " 11. Run 'aerc'"
     echo ""
-    echo "  Periodic sync:  cd ~/.mail/gmail && gmi sync && notmuch new"
+    echo "  Timers:  mail-sync (pull every 5 min) + mail-push (push every 2 hours)"
+    echo "  Manual:  cd ~/.mail/gmail && gmi pull && notmuch new   (fetch)"
+    echo "           cd ~/.mail/gmail && gmi push                  (push now)"
+    echo "  Status:  systemctl --user list-timers 'mail-*'"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -705,9 +777,10 @@ run_all() {
     echo "    ./install.sh --eza          # Modern ls (aliases: ls, ll, la, lt)"
     echo "    ./install.sh --bat          # Modern cat (aliases: cat, catp)"
     echo "    ./install.sh --zoxide       # Smarter cd (commands: z, zi)"
-    echo "    ./install.sh --lazygit      # Terminal git UI"
+    echo "    ./install.sh --lazygit      # Terminal git UI + Catppuccin config"
     echo "    ./install.sh --direnv       # Per-directory env vars"
-    echo "    ./install.sh --tmux         # tmux config"
+    echo "    ./install.sh --tmux         # tmux config (sesh sessions, lazygit popup)"
+    echo "    ./install.sh --superfile    # Terminal file manager"
     echo "    ./install.sh --taskwarrior  # Task management CLI"
     echo "    ./install.sh --butler       # ASUS power/backlight daemon"
     echo "    ./install.sh --email        # Terminal email (aerc + notmuch + lieer)"
@@ -749,6 +822,7 @@ for arg in "$@"; do
         --direnv)      install_direnv ;;
         --tmux)        install_tmux_config ;;
         --taskwarrior) install_taskwarrior ;;
+        --superfile)   install_superfile ;;
         --butler)      install_butler ;;
         --email)       install_email ;;
         --tools)       install_tools ;;
@@ -758,7 +832,7 @@ for arg in "$@"; do
             echo "  No arguments = --all"
             echo ""
             echo "Optional tools (not in --all):"
-            echo "  --tools --eza --bat --zoxide --lazygit --direnv --tmux --taskwarrior --butler --email --upwork"
+            echo "  --tools --eza --bat --zoxide --lazygit --direnv --tmux --superfile --taskwarrior --butler --email --upwork"
             ;;
         *)
             err "Unknown option: $arg"

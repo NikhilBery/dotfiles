@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Launch shortcuts cheatsheet as a floating popup
+#
+# Bind to Meta+/ in KDE: System Settings > Shortcuts > Custom Shortcuts
+# Or: add to kglobalshortcutsrc
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# If already inside the popup, just run fzf
+if [[ "$1" == "--inline" ]]; then
+    "$SCRIPT_DIR/shortcuts" | fzf \
+        --ansi \
+        --no-sort \
+        --layout=reverse \
+        --margin=1,2 \
+        --padding=1 \
+        --border=rounded \
+        --border-label="  Shortcuts — type to search, Esc to close " \
+        --border-label-pos=3 \
+        --header="  Filter by app: kde | kitty | tmux | zsh | lazygit | aerc | superfile" \
+        --color="bg:#000000,fg:#cdd6f4,hl:#f9e2af,border:#89b4fa,header:#a6adc8,info:#cba6f7,pointer:#f5e0dc,prompt:#89b4fa,spinner:#f5e0dc,bg+:#313244,fg+:#cdd6f4,hl+:#f9e2af,label:#89b4fa" \
+        --prompt="  " \
+        --pointer="▌" \
+        --no-mouse \
+        --bind "esc:abort,q:abort,ctrl-c:abort"
+    exit 0
+fi
+
+# Kill existing popup if open (toggle behavior)
+if pgrep -f "shortcuts-cheatsheet" >/dev/null 2>&1; then
+    pkill -f "shortcuts-cheatsheet"
+    exit 0
+fi
+
+# Launch floating kitty window
+# The class "shortcuts-cheatsheet" matches the KDE window rule in kwinrulesrc
+# which makes it: centered, borderless, always-on-top, skip taskbar
+kitty \
+    --class "shortcuts-cheatsheet" \
+    --name "shortcuts-cheatsheet" \
+    --title "Shortcuts" \
+    --override background_opacity=0.92 \
+    --override background_blur=48 \
+    --override confirm_os_window_close=0 \
+    --override tab_bar_min_tabs=99 \
+    --override cursor_shape=beam \
+    --override cursor_blink_interval=0 \
+    --override window_padding_width=0 \
+    --override hide_window_decorations=yes \
+    --override enable_audio_bell=no \
+    --override notify_on_cmd_finish=never \
+    -e "$0" --inline 2>/dev/null

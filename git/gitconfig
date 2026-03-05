@@ -1,9 +1,37 @@
 [credential "https://github.com"]
-	helper = 
+	helper =
 	helper = !/usr/bin/gh auth git-credential
 [credential "https://gist.github.com"]
-	helper = 
+	helper =
 	helper = !/usr/bin/gh auth git-credential
 [user]
 	name = Nikhil Bery
 	email = nikhilbery@gmail.com
+[alias]
+	lg = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(auto)%d%C(reset)' --all
+	st = status -sb
+	unstage = reset HEAD --
+	last = log -1 HEAD
+	amend = commit --amend --no-edit
+	autoremove = !git fetch --prune && git branch --merged | grep -vE '(^\\*|main|master|dev|staging|prod)' | xargs -r git branch -d
+[core]
+	excludesFile = ~/.config/git/gitignore_global
+	editor = vim
+[diff]
+	tool = vimdiff
+[merge]
+	tool = vimdiff
+	conflictstyle = diff3
+[mergetool]
+	keepBackup = false
+	prompt = false
+[difftool]
+	prompt = false
+[push]
+	autoSetupRemote = true
+[pull]
+	rebase = true
+[rebase]
+	autosquash = true
+[init]
+	defaultBranch = main
